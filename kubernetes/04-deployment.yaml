@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streaming-server
+  namespace: streaming-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streaming-server
+  template:
+    metadata:
+      labels:
+        app: streaming-server
+    spec:
+      containers:
+      - name: streaming-server
+        image: codeworksio/streaming-server:latest
+        ports:
+        - containerPort: 1935
+          name: rtmp
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        volumeMounts:
+        - name: streaming-data
+          mountPath: /var/lib/streaming
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          tcpSocket:
+            port: 1935
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 1935
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: streaming-data
+        persistentVolumeClaim:
+          claimName: streaming-data-pvc
+      - name: nginx-config
+        configMap:
+          name: nginx-rtmp-config
